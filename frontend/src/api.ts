@@ -62,7 +62,16 @@ export const api = {
     req<{ added: number; skipped: number; companies: string[] }>("/api/gmail/sync", {
       method: "POST",
     }),
-  googleLoginUrl: () => req<{ url: string }>("/api/auth/google/url"),
+  login: (email: string, password: string) =>
+    req<{ token: string; user: { id: number; email: string; name: string } }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  register: (email: string, password: string, name: string) =>
+    req<{ token: string; user: { id: number; email: string; name: string } }>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name }),
+    }),
   fetchJd: (url: string) =>
     req<{ title: string; company: string; text: string }>("/api/jobs/fetch-jd", {
       method: "POST",

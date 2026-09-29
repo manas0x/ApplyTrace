@@ -4,7 +4,6 @@ import AddApplication from "./pages/AddApplication";
 import ApplicationDetail from "./pages/ApplicationDetail";
 import Discover from "./pages/Discover";
 import Login from "./pages/Login";
-import LoginCallback from "./pages/LoginCallback";
 import { getToken } from "./api";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -16,7 +15,6 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/login/callback" element={<LoginCallback />} />
         <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/add" element={<RequireAuth><AddApplication /></RequireAuth>} />
         <Route path="/discover" element={<RequireAuth><Discover /></RequireAuth>} />
