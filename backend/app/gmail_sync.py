@@ -40,6 +40,10 @@ def _redirect_uri() -> str:
 
 
 def get_flow() -> Flow:
+    # NOTE: autogenerate_code_verifier=False — the library now auto-adds PKCE
+    # to the auth URL, but the verifier lives on the Flow object and would be
+    # lost between serverless invocations (auth-url and callback run in
+    # separate function calls). Plain OAuth2 + client_secret needs no PKCE.
     return Flow.from_client_config(
         {
             "web": {
@@ -52,6 +56,7 @@ def get_flow() -> Flow:
         },
         scopes=SCOPES,
         redirect_uri=_redirect_uri(),
+        autogenerate_code_verifier=False,
     )
 
 
