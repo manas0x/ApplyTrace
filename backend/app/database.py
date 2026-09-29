@@ -18,6 +18,16 @@ if os.getenv("VERCEL") and DATABASE_URL.startswith("sqlite"):
 # SQLite needs this for threaded servers; other drivers don't.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
+if DATABASE_URL.startswith("mysql"):
+    # Hosted MySQL (e.g. Aiven) enforces encrypted connections. Use TLS
+    # without pinning a CA cert (server still encrypts; fine for this app).
+    import ssl as _ssl
+
+    _ctx = _ssl.create_default_context()
+    _ctx.check_hostname = False
+    _ctx.verify_mode = _ssl.CERT_NONE
+    connect_args = {"ssl": _ctx}
+
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
