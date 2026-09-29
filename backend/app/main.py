@@ -33,3 +33,8 @@ app.include_router(auth.router)  # public: login flow
 # Gmail: public only for Google's OAuth callback; the rest needs login
 # (per-endpoint dependencies are set inside the gmail router).
 app.include_router(gmail.router)
+
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "service": "applytrace"}
