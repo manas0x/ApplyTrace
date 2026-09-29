@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { STATUSES } from "./types";
+import { STATUSES } from "../types";
 
 const STATUS_STYLES: Record<string, string> = {
   wishlist: "bg-gray-100 text-gray-700",
@@ -43,7 +43,7 @@ export function StatusFilter({
   return (
     <div className="flex flex-wrap gap-2">
       <FilterButton active={value === ""} onClick={() => onChange("")} label="All" />
-      {STATUSES.map((s) => (
+      {STATUSES.map((s: string) => (
         <FilterButton key={s} active={value === s} onClick={() => onChange(s)} label={s} />
       ))}
     </div>
