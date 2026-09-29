@@ -15,12 +15,17 @@ export function setToken(t: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+async function req<T>(path: string, init?: RequestInit, raw401 = false): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, { headers, ...init });
   if (res.status === 401) {
+    if (raw401) {
+      // Login/register failures: surface the server's real message.
+      const body = (await res.json().catch(() => ({}))) as { detail?: string };
+      throw new Error(body.detail ?? "Wrong email or password.");
+    }
     setToken(null);
     if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
     throw new Error("Session expired — please sign in again.");
@@ -63,15 +68,17 @@ export const api = {
       method: "POST",
     }),
   login: (email: string, password: string) =>
-    req<{ token: string; user: { id: number; email: string; name: string } }>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    req<{ token: string; user: { id: number; email: string; name: string } }>(
+      "/api/auth/login",
+      { method: "POST", body: JSON.stringify({ email, password }) },
+      true
+    ),
   register: (email: string, password: string, name: string) =>
-    req<{ token: string; user: { id: number; email: string; name: string } }>("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password, name }),
-    }),
+    req<{ token: string; user: { id: number; email: string; name: string } }>(
+      "/api/auth/register",
+      { method: "POST", body: JSON.stringify({ email, password, name }) },
+      true
+    ),
   fetchJd: (url: string) =>
     req<{ title: string; company: string; text: string }>("/api/jobs/fetch-jd", {
       method: "POST",
