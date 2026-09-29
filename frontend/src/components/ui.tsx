@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { STATUSES } from "../types";
+import { setToken } from "../api";
 
 const STATUS_STYLES: Record<string, string> = {
   wishlist: "bg-gray-100 text-gray-700",
@@ -18,17 +19,25 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  function logout() {
+    setToken(null);
+    navigate("/login");
+  }
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <nav className="bg-white border-b shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-6">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-6">
           <Link to="/" className="font-bold text-xl text-indigo-600">ApplyTrace</Link>
-          <Link to="/" className="text-sm hover:text-indigo-600">Dashboard</Link>
-          <Link to="/add" className="text-sm hover:text-indigo-600">Add application</Link>
-          <span className="ml-auto text-xs text-slate-400">2027 batch hunt 🎯</span>
+          <Link to="/" className="text-sm hover:text-indigo-600">Board</Link>
+          <Link to="/add" className="text-sm hover:text-indigo-600">Add</Link>
+          <Link to="/discover" className="text-sm hover:text-indigo-600">Discover jobs</Link>
+          <button onClick={logout} className="ml-auto text-xs text-slate-400 hover:text-slate-600">
+            Sign out
+          </button>
         </div>
       </nav>
-      <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
     </div>
   );
 }

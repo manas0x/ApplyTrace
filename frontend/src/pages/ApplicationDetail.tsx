@@ -15,6 +15,19 @@ export default function ApplicationDetail() {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [jdUrl, setJdUrl] = useState("");
+  const [fetchingJd, setFetchingJd] = useState(false);
+
+  async function fetchJdFromLink() {
+    const url = (jdUrl || app?.link || "").trim();
+    if (!url) { setError("Paste a job posting link first."); return; }
+    setFetchingJd(true); setError("");
+    try {
+      const r = await api.fetchJd(url);
+      setApp((prev) => prev ? { ...prev, jd_text: r.text } : prev);
+    } catch (e) { setError(String(e)); }
+    finally { setFetchingJd(false); }
+  }
 
   useEffect(() => {
     api.getApplication(appId).then(setApp).catch((e) => setError(String(e)));
@@ -64,6 +77,26 @@ export default function ApplicationDetail() {
           </select>
           <StatusBadge status={app.status} />
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl border p-4 mb-4">
+        <label className="text-sm font-medium">Fetch the JD automatically</label>
+        <div className="flex gap-2 mt-1">
+          <input
+            className={inputCls}
+            value={jdUrl}
+            onChange={(e) => setJdUrl(e.target.value)}
+            placeholder={app.link || "Paste the job posting link…"}
+          />
+          <button
+            onClick={fetchJdFromLink}
+            disabled={fetchingJd}
+            className="shrink-0 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+          >
+            {fetchingJd ? "Fetching…" : "Auto-fill JD"}
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">Downloads the posting and extracts the description — no manual pasting needed.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
