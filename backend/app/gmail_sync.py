@@ -62,9 +62,10 @@ def get_flow() -> Flow:
 
 def auth_url() -> str:
     flow = get_flow()
-    url, _ = flow.authorization_url(
-        access_type="offline", prompt="consent", include_granted_scopes="true"
-    )
+    # NOTE: no include_granted_scopes — that makes Google append openid/email/
+    # profile scopes to the grant, and the token exchange then fails with
+    # "Scope has changed". We only ever request gmail.readonly.
+    url, _ = flow.authorization_url(access_type="offline", prompt="consent")
     return url
 
 
