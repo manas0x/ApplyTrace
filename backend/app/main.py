@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
-from .routers import applications, analysis, stats
+from .routers import applications, analysis, stats, gmail
 
 app = FastAPI(title="ApplyTrace API", version="0.1.0")
 
@@ -25,6 +25,7 @@ Base.metadata.create_all(bind=engine)  # create tables on startup (dev convenien
 app.include_router(applications.router)
 app.include_router(analysis.router)
 app.include_router(stats.router)
+app.include_router(gmail.router)
 
 
 @app.get("/api/health")

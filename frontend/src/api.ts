@@ -33,4 +33,10 @@ export const api = {
     req<AnalyzeResult>(`/api/analyze/application/${id}`, { method: "POST" }),
   stats: () => req<Stats>("/api/stats"),
   seed: () => req<{ seeded: number; message: string }>("/api/seed", { method: "POST" }),
+  gmailStatus: () => req<{ connected: boolean; email: string | null }>("/api/gmail/status"),
+  gmailAuthUrl: () => req<{ url: string }>("/api/gmail/auth-url"),
+  gmailSync: () =>
+    req<{ added: number; skipped: number; companies: string[] }>("/api/gmail/sync", {
+      method: "POST",
+    }),
 };

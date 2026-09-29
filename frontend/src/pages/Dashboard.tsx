@@ -16,10 +16,60 @@ export default function Dashboard() {
   const [apps, setApps] = useState<Application[]>([]);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
+  const [gmail, setGmail] = useState<{ connected: boolean; email: string | null } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  const refreshData = async () => {
+    const [s, a] = await Promise.all([
+      api.stats(),
+      api.listApplications(filter || undefined),
+    ]);
+    setStats(s);
+    setApps(a);
+  };
+
+  const runGmailSync = async () => {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const r = await api.gmailSync();
+      const names = r.companies.slice(0, 3).join(", ");
+      setSyncMsg(
+        `Gmail sync: ${r.added} new application${r.added === 1 ? "" : "s"}` +
+          (names ? ` (${names}${r.companies.length > 3 ? ", …" : ""})` : "") +
+          `, ${r.skipped} already tracked.`
+      );
+      await refreshData();
+    } catch (e) {
+      setSyncMsg(`Sync failed: ${e}`);
+    }
+    setSyncing(false);
+  };
+
+  const handleGmail = async () => {
+    if (gmail?.connected) {
+      await runGmailSync();
+      return;
+    }
+    try {
+      const { url } = await api.gmailAuthUrl();
+      window.location.href = url; // Google consent, then back to /?gmail=connected
+    } catch (e) {
+      setSyncMsg(`Could not start Gmail connect: ${e}`);
+    }
+  };
 
   useEffect(() => {
     api.stats().then(setStats).catch((e) => setError(String(e)));
     api.seed().catch(() => {}); // idempotent demo seed on first visit
+    api.gmailStatus().then(setGmail).catch(() => setGmail({ connected: false, email: null }));
+    // Returning from Google OAuth consent: auto-run the first sync.
+    if (new URLSearchParams(window.location.search).get("gmail") === "connected") {
+      window.history.replaceState({}, "", "/");
+      setGmail({ connected: true, email: null });
+      runGmailSync();
+    }
   }, []);
 
   useEffect(() => {
@@ -45,7 +95,18 @@ export default function Dashboard() {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Applications</h2>
-        <StatusFilter value={filter} onChange={setFilter} />
+        <div className="flex items-center gap-3">
+          {syncMsg && <span className="text-xs text-slate-500 max-w-[240px]">{syncMsg}</span>}
+          <button
+            onClick={handleGmail}
+            disabled={syncing}
+            className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+            title={gmail?.email ? `Connected as ${gmail.email}` : "Detect applications from your Gmail"}
+          >
+            {syncing ? "Syncing…" : gmail?.connected ? "Sync from Gmail" : "Connect Gmail"}
+          </button>
+          <StatusFilter value={filter} onChange={setFilter} />
+        </div>
       </div>
 
       <div className="space-y-3">

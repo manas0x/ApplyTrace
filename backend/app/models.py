@@ -30,3 +30,13 @@ class ResumeKeyword(Base):
     id = Column(Integer, primary_key=True, index=True)
     keyword = Column(String(100), unique=True, index=True, nullable=False)
     weight = Column(Float, default=1.0)  # higher = more central to his profile
+
+
+class OAuthToken(Base):
+    """Stores OAuth refresh tokens for integrations (e.g. Gmail)."""
+    __tablename__ = "oauth_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    service = Column(String(50), unique=True, index=True, nullable=False)  # "gmail"
+    refresh_token = Column(Text, nullable=False)
+    email = Column(String(200), default="")  # account the token belongs to
