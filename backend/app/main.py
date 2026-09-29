@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import get_current_user
 from .database import Base, engine
+from .migrate import ensure_columns
 from .routers import applications, analysis, stats, gmail, auth, jobs
 
 app = FastAPI(title="ApplyTrace API", version="0.2.0")
@@ -22,6 +23,7 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)  # create tables on startup (dev convenience)
+ensure_columns(engine)  # add columns to tables that already exist
 
 # Everything except /api/health and the OAuth callbacks requires login.
 authed = [Depends(get_current_user)]

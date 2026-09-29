@@ -64,3 +64,25 @@ class StatsResponse(BaseModel):
     interviewing: int
     offered: int
     rejected: int
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    name: str = ""
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: UserOut

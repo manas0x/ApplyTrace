@@ -1,87 +1,53 @@
-"""Google sign-in for ApplyTrace.
+"""Email + password auth for ApplyTrace.
 
-Flow:
-  1. Frontend opens /api/auth/google/url -> Google consent (openid email profile).
-  2. Google redirects to /api/auth/google/callback -> user is found/created,
-     a JWT is issued, and the browser is sent to the frontend with the token.
+  POST /api/auth/register {email, password, name?} -> {token, user}
+  POST /api/auth/login    {email, password}        -> {token, user}
+
+Passwords are hashed with PBKDF2-SHA256 (stdlib) and stored in MySQL.
+The frontend stores the JWT and sends it as `Authorization: Bearer <token>`.
 """
-import os
-
-import requests
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import RedirectResponse
-from google_auth_oauthlib.flow import Flow
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import models, schemas
 from ..auth import create_token
 from ..database import get_db
+from ..passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://applytrace-seven.vercel.app")
-LOGIN_SCOPES = ["openid", "email", "profile"]
 
-
-def _redirect_uri() -> str:
-    return os.getenv(
-        "GOOGLE_LOGIN_REDIRECT_URI",
-        "https://applytrace-api.vercel.app/api/auth/google/callback",
+def _auth_response(user: models.User) -> schemas.AuthResponse:
+    return schemas.AuthResponse(
+        token=create_token(user),
+        user=schemas.UserOut(id=user.id, email=user.email, name=user.name or ""),
     )
 
 
-def _flow() -> Flow:
-    # Same serverless note as the Gmail flow: disable auto PKCE, the verifier
-    # would be lost between the auth-url call and the callback.
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [_redirect_uri()],
-            }
-        },
-        scopes=LOGIN_SCOPES,
-        redirect_uri=_redirect_uri(),
-        autogenerate_code_verifier=False,
+@router.post("/register", response_model=schemas.AuthResponse)
+def register(payload: schemas.RegisterRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Please enter a valid email address.")
+    if len(payload.password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters.")
+    if db.query(models.User).filter(models.User.email == email).first():
+        raise HTTPException(400, "An account with this email already exists — sign in instead.")
+    user = models.User(
+        email=email,
+        name=payload.name.strip(),
+        password_hash=hash_password(payload.password),
     )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _auth_response(user)
 
 
-@router.get("/google/url")
-def google_url():
-    if not os.getenv("GOOGLE_CLIENT_ID"):
-        raise HTTPException(500, "Google login not configured on server")
-    flow = _flow()
-    url, _ = flow.authorization_url(access_type="offline", prompt="select_account")
-    return {"url": url}
-
-
-@router.get("/google/callback")
-def google_callback(code: str, db: Session = Depends(get_db)):
-    try:
-        creds = _flow().fetch_token(code=code)
-    except Exception as e:
-        raise HTTPException(400, f"Google sign-in failed: {e}")
-    try:
-        info = requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {creds['access_token']}"},
-            timeout=15,
-        ).json()
-        email = info.get("email", "")
-    except Exception as e:
-        raise HTTPException(400, f"Could not read Google profile: {e}")
-    if not email:
-        raise HTTPException(400, "Google did not return an email address")
-
+@router.post("/login", response_model=schemas.AuthResponse)
+def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
     user = db.query(models.User).filter(models.User.email == email).first()
-    if not user:
-        user = models.User(email=email, name=info.get("name", ""), picture=info.get("picture", ""))
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    token = create_token(user)
-    return RedirectResponse(f"{FRONTEND_URL}/login/callback?token={token}")
+    if not user or not verify_password(payload.password, user.password_hash or ""):
+        raise HTTPException(401, "Wrong email or password.")
+    return _auth_response(user)

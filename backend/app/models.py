@@ -43,10 +43,11 @@ class OAuthToken(Base):
 
 
 class User(Base):
-    """ApplyTrace login account (Google sign-in)."""
+    """ApplyTrace login account (email + password)."""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(200), unique=True, index=True, nullable=False)
     name = Column(String(200), default="")
     picture = Column(String(500), default="")
+    password_hash = Column(String(255), default="")
