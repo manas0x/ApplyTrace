@@ -7,11 +7,15 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from .. import gmail_sync, models
+from ..auth import get_current_user
 from ..database import get_db
 
 router = APIRouter(prefix="/api/gmail", tags=["gmail"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://applytrace-seven.vercel.app")
+
+# Everything here needs login except /callback (Google's redirect).
+login_required = Depends(get_current_user)
 
 
 def _token(db: Session) -> models.OAuthToken | None:
@@ -19,13 +23,13 @@ def _token(db: Session) -> models.OAuthToken | None:
 
 
 @router.get("/status")
-def status(db: Session = Depends(get_db)):
+def status(_user=login_required, db: Session = Depends(get_db)):
     tok = _token(db)
     return {"connected": tok is not None, "email": tok.email if tok else None}
 
 
 @router.get("/auth-url")
-def auth_url():
+def auth_url(_user=login_required):
     if not os.getenv("GOOGLE_CLIENT_ID"):
         raise HTTPException(500, "Gmail not configured on server (missing GOOGLE_CLIENT_ID)")
     return {"url": gmail_sync.auth_url()}
@@ -60,7 +64,7 @@ def callback(code: str, db: Session = Depends(get_db)):
 
 
 @router.post("/sync")
-def sync(db: Session = Depends(get_db)):
+def sync(_user=login_required, db: Session = Depends(get_db)):
     """Scan Gmail for application signals and add missing applications."""
     tok = _token(db)
     if not tok or not tok.refresh_token:

@@ -8,3 +8,6 @@ pymysql>=1.1
 google-api-python-client>=2.100
 google-auth>=2.20
 google-auth-oauthlib>=1.2
+pyjwt>=2.8
+beautifulsoup4>=4.12
+requests>=2.31

@@ -40,3 +40,13 @@ class OAuthToken(Base):
     service = Column(String(50), unique=True, index=True, nullable=False)  # "gmail"
     refresh_token = Column(Text, nullable=False)
     email = Column(String(200), default="")  # account the token belongs to
+
+
+class User(Base):
+    """ApplyTrace login account (Google sign-in)."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(200), unique=True, index=True, nullable=False)
+    name = Column(String(200), default="")
+    picture = Column(String(500), default="")
